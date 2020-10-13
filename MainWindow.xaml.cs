@@ -88,19 +88,22 @@ namespace CFS_cs_demo
         {
 			//GetCFSData();
 			//StartCFSData();
-
-			update_timer = new System.Timers.Timer(tick_receive);
+			SetCFSFilterFrequency(0x02);
+			
+			/*update_timer = new System.Timers.Timer(tick_receive);
 			update_timer.Elapsed += update;
 			update_timer.AutoReset = true;
-			update_timer.Enabled = true;
+			update_timer.Enabled = true;*/
 		}
 
 		private void button2_Click(object sender, RoutedEventArgs e)
 		{
+			GetCFSFilterFrequency();
+
 			//StopCFSData();
 
-			update_timer.Stop();
-			update_timer.Dispose();
+			/*update_timer.Stop();
+			update_timer.Dispose();*/
 		}
 
 		private void update(Object source, ElapsedEventArgs e)
@@ -150,6 +153,59 @@ namespace CFS_cs_demo
 				Limit[5] = BitConverter.ToSingle(read_buffer, 24);
 				Console.WriteLine("LimitFx:{0}, LimitFy:{1}, LimitFz:{2}", Limit[0], Limit[1], Limit[2]);
 				Console.WriteLine("LimitMx:{0}, LimitMy:{1}, LimitMz:{2}", Limit[3], Limit[4], Limit[5]);
+			}
+		}
+
+		private void GetCFSFilterFrequency()
+		{
+			byte[] command = { 0x04, 0xFF, 0xB6, 0x00 };
+			byte[] read_buffer = new byte[14];
+			int result = Command2CFS(command, read_buffer);
+			if (result == 0)
+			{
+				int response = read_buffer[4];
+				int frequency = 0;
+				switch (response)
+				{
+					case 0x00:
+						frequency = 0;
+						break;
+					case 0x01:
+						frequency = 10;
+						break;
+					case 0x02:
+						frequency = 30;
+						break;
+					case 0x03:
+						frequency = 100;
+						break;
+				}
+				Console.WriteLine("Cut off frequency is {0} Hz", frequency);
+			}
+		}
+
+		// you can chose the 0x00, 0x01, 0x02, 0x03 as frequency OFF, 10Hz, 30Hz, 100Hz
+		private void SetCFSFilterFrequency(int frequency)
+		{
+			byte[] command = { 0x08, 0xFF, 0xA6, 0x00, 0x00, 0x00, 0x00, 0x00};
+			command[4] = (byte)frequency;
+			byte[] read_buffer = new byte[10];
+			int result = Command2CFS(command, read_buffer);
+			for (int i = 0; i < read_buffer.Length; i++)
+			{
+				Console.WriteLine(read_buffer[i]);
+			}
+			if (result == 0)
+			{
+				if(read_buffer[3] == 0x00)
+                {
+					Console.WriteLine("Successfully set the cutoff frequency. {0}", frequency);
+					Console.WriteLine("Turn off the CFS sensor");
+				}
+				else
+                {
+					Console.WriteLine("error{0}, Faled to set the cutoff frequency.", read_buffer[3]);
+				}
 			}
 		}
 
